@@ -24,7 +24,7 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
     string public baseTokenURI;
 
     //*** VK added code #1***
-    struct Sale {
+    struct Listing {
         address seller;
         uint256 tokenId;
         uint256 price;
@@ -34,8 +34,9 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
     address public _contractOwner;
     uint256 public _price;
     IERC721 public nftContract;
-    mapping (uint256 => Sale) public tokenIdToSale;
-    event SaleCreated(address seller, uint256 tokenId, uint256 price);
+    mapping (uint256 => Listing) public Listings;
+
+    event listingCreated(address seller, uint256 tokenId, uint256 price);
     event SaleCancelled(address seller, uint256 tokenId);
     event SaleSuccessful(address buyer, uint256 tokenId, uint256 price);
     event nftdetails(uint256 tokenId, address owner);
@@ -76,6 +77,16 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
     function createNFT(uint256 newTokenID, string memory data) public {
         _safeMint(msg.sender, newTokenID);
         _setTokenURI(newTokenID, data);
+
+        Listing memory listing = Listing({
+            seller: msg.sender,
+            tokenId: newTokenID,
+            price: 0,
+            active: false
+        });
+
+        Listings[newTokenID] = listing;
+
         emit nftdetails(newTokenID, msg.sender);
     }
 
@@ -100,51 +111,50 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
     }
 
     // Transfer ownership of an NFT to a new address
-    function transferNFTOwnership(uint256 tokenId, address newOwner) public onlyOwner {
+    function transferNFTOwnership(uint256 tokenId, address newOwner) public {
+        require(_isApprovedOrOwner(msg.sender, tokenId), "Caller is not the owner or approved for this token");
         require(newOwner != address(0), "Invalid recipient address");
         require(_exists(tokenId), "Token ID does not exist");
 
         _safeTransfer(msg.sender, newOwner, tokenId, "");
     }
 
-    function createSale(uint256 tokenId, uint256 price) external {
-        require(nftContract.ownerOf(tokenId) == msg.sender, "Only token owner can create sale");
+    function listNFTForSale(uint256 tokenId, uint256 price) public {
+        require(_isApprovedOrOwner(msg.sender, tokenId), "Caller is not the owner or approved for this token");
         require(price > 0, "Price must be greater than zero");
-        require(tokenIdToSale[tokenId].active == false, "Token already listed for sale");
+        require(Listings[tokenId].active == false, "Token already listed for sale");
 
-        Sale memory sale = Sale({
-            seller: msg.sender,
-            tokenId: tokenId,
-            price: price,
-            active: true
-        });
-        tokenIdToSale[tokenId] = sale;
-        _price = sale.price;
-        emit SaleCreated(msg.sender, tokenId, price);
+        Listings[tokenId].price = price;
+        Listings[tokenId].active = true;
+        emit listingCreated(msg.sender, tokenId, Listings[tokenId].price);
     }
 
-    function getPrice (uint256 tokenId) public returns (uint256 price){
-        return _price;
+    function getPrice(uint256 tokenId) public view virtual returns (uint256) {
+        require(Listings[tokenId].active == true, "Sale already cancelled");
+        return Listings[tokenId].price;
     }
 
-    function cancelSale(uint256 tokenId) external {
-        require(tokenIdToSale[tokenId].seller == msg.sender, "Only seller can cancel sale");
-        require(tokenIdToSale[tokenId].active == true, "Sale already cancelled");
+    function removeNFTFromSale(uint256 tokenId) public {
+        require(_isApprovedOrOwner(msg.sender, tokenId), "Caller is not the owner or approved for this token");
+        require(Listings[tokenId].active == true, "Sale already cancelled");
 
-        delete tokenIdToSale[tokenId];
-
+        Listings[tokenId].active = false;
         emit SaleCancelled(msg.sender, tokenId);
     }
 
+    function isNFTForSale(uint256 tokenId) public view virtual returns (bool) {
+        return Listings[tokenId].active;
+    }
+
     function sellNFT(uint256 tokenId) external payable {
-        Sale memory sale = tokenIdToSale[tokenId];
-        require(sale.active == true, "Sale is not active");
-        require(msg.value == sale.price, "Incorrect amount sent");
+        Listing memory listing = Listings[tokenId];
+        require(listing.active == true, "Sale is not active");
+        require(msg.value == listing.price, "Incorrect amount sent");
 
-        address seller = sale.seller;
-        uint256 price = sale.price;
+        address seller = listing.seller;
+        uint256 price = listing.price;
 
-        delete tokenIdToSale[tokenId];
+        delete Listings[tokenId];
 
         // Transfer the NFT to the buyer
         nftContract.safeTransferFrom(seller, msg.sender, tokenId);

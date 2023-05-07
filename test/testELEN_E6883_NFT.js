@@ -1,8 +1,14 @@
 const createNFT = require("../scripts/createNFT.js");
+const getPrice = require("../scripts/getPrice.js");
 const getURIData = require("../scripts/getURIData.js");
+const isNFTForSale = require("../scripts/isNFTForSale.js");
+const listNFTForSale = require("../scripts/listNFTForSale.js");
 const ownerOf = require("../scripts/ownerOf.js");
+const removeNFTFromSale = require("../scripts/removeNFTFromSale.js");
 const transferNFT = require("../scripts/transferNFT.js");
 const ELEN_E6883_NFT = artifacts.require("./ELEN_E6883_NFT.sol");
+
+var primaryOwner;
 
 contract("ELEN_E6883_NFT", function ([acct1, acct2, acct3, acct4]) {
     it("TC1: create a NFT with unique ID.", async () => {
@@ -11,6 +17,7 @@ contract("ELEN_E6883_NFT", function ([acct1, acct2, acct3, acct4]) {
 
         const txnData = await createNFT(1216, name, desc);
         const dataURI = await getURIData(1216);
+        const primaryOwner = await ownerOf(1216);
 
         const jsonObj = atob(dataURI.substring(29));
         const result = JSON.parse(jsonObj);
@@ -25,23 +32,32 @@ contract("ELEN_E6883_NFT", function ([acct1, acct2, acct3, acct4]) {
         const desc = "This is a test NFT description for test case 2";
 
         const tokenID = await createNFT(1217, name, desc);
-        const dataURI = await getURIData(1217);
-
         await transferNFT(1217, "0x51ad24020e97def8a779e50cbfc28439a73dd398");
+
         const currOwner = await ownerOf(1217);
         assert.equal(currOwner, "0x51ad24020e97def8a779e50cbfc28439a73dd398", "The owners should be the same.");
     });
     
     it("TC3: List NFT.", async () => {
-        await createSale (1216, 110)
-        const price = await getPrice(1216);
-        assert.equal(price, 1216, "The price does not match.");
+        const name = "Test NFT #3";
+        const desc = "This is a test NFT description for test case 3";
+
+        const tokenID = await createNFT(1218, name, desc);
+        await listNFTForSale(1218, 31415);
+
+        const price = await getPrice(1218);
+        assert.equal(price, 31415, "The price does not match.");
     });
     
     it("TC4: delist NFT.", async () => {
-        await delistNFT (1216)
-        const aOwner = await getOwner(1216);
-        assert.equal(aOwner, NaN, "Delist NFT was not done.");
+        const name = "Test NFT #4";
+        const desc = "This is a test NFT description for test case 4";
+
+        const tokenID = await createNFT(1219, name, desc);
+        await listNFTForSale(1219, 31415);
+        await removeNFTFromSale(1219);
+
+        assert.equal(await isNFTForSale(1219), false, "The NFT is still for sale.");
     });
     
     it("TC5: Sell NFT.", async () => {
@@ -57,5 +73,6 @@ contract("ELEN_E6883_NFT", function ([acct1, acct2, acct3, acct4]) {
         const newOwner = await getOwner(1216);
         assert.equal(currOwner, newOwner, "Sell Cancel order failed.");
     });
+
     //*** VK end code #3 ***    
 });
