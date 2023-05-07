@@ -8,15 +8,14 @@ function getErrorMessage(error) {
     return String(error)
 }
 
-const createNFT = async (unique_id, name, description) => {
+const setOwner = async (unique_id, newAddress) => {
     try {
-        const nftObject =  "data:application/json;base64," + btoa(JSON.stringify({name : name, description : description}));
         const nftContract = await ELEN_E6883_NFT.deployed();
-        const txn = await nftContract.createNFT(unique_id, nftObject);
+        const txn = await nftContract.setOwner(unique_id, newAddress);
         return txn;
     } catch(err) {
         console.log('Doh! ', getErrorMessage(err));
     }
 }
 
-module.exports = createNFT;
+module.exports = setOwner;
