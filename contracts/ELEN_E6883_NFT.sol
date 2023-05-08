@@ -20,12 +20,10 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
     uint public constant PRICE = 0.00001 ether;
     // The max number of mints per wallet
     uint public constant MAX_PER_MINT = 5;
-    
     string public baseTokenURI;
 
     //*** VK added code #1***
     struct Listing {
-        address seller;
         uint256 tokenId;
         uint256 price;
         bool active;
@@ -79,7 +77,6 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
         _setTokenURI(newTokenID, data);
 
         Listing memory listing = Listing({
-            seller: msg.sender,
             tokenId: newTokenID,
             price: 0,
             active: false
@@ -146,31 +143,21 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
         return Listings[tokenId].active;
     }
 
-    function sellNFT(uint256 tokenId) external payable {
-        Listing memory listing = Listings[tokenId];
-        require(listing.active == true, "Sale is not active");
-        require(msg.value == listing.price, "Incorrect amount sent");
+    // Buy an NFT
+    function purchaseNFT(uint256 tokenId) public payable {
+        require(_exists(tokenId), "Token ID does not exist");
+        require(msg.value >= Listings[tokenId].price, "Not enough ether to cover asking price");
 
-        address seller = listing.seller;
-        uint256 price = listing.price;
+        address seller = ownerOf(tokenId);
+        emit SaleSuccessful(seller, tokenId, 1);
+        address payable buyer = payable(msg.sender);
+        emit SaleSuccessful(buyer, tokenId, 1);
+        payable(seller).transfer(msg.value);
+        _safeTransfer(seller, buyer, tokenId, "");
+        Listings[tokenId].active = false;
 
-        delete Listings[tokenId];
-
-        // Transfer the NFT to the buyer
-        nftContract.safeTransferFrom(seller, msg.sender, tokenId);
-
-        // Transfer the payment to the seller
-        (bool success,) = seller.call{value: price}("");
-        require(success, "Transfer failed");
-
-        emit SaleSuccessful(msg.sender, tokenId, price);
-    }
-
-    function delistNFT(uint256 tokenID) public {
-        delete _tokenIds ;
-        delete _contractOwner ;
+        emit SaleSuccessful(buyer, tokenId, msg.value);
     }
 
     //*** VK end code #2 ***
-
 }

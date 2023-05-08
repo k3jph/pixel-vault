@@ -6,18 +6,16 @@ const listNFTForSale = require("../scripts/listNFTForSale.js");
 const ownerOf = require("../scripts/ownerOf.js");
 const removeNFTFromSale = require("../scripts/removeNFTFromSale.js");
 const transferNFT = require("../scripts/transferNFT.js");
+
 const ELEN_E6883_NFT = artifacts.require("./ELEN_E6883_NFT.sol");
 
-var primaryOwner;
-
-contract("ELEN_E6883_NFT", function ([acct1, acct2, acct3, acct4]) {
-    it("TC1: create a NFT with unique ID.", async () => {
+contract("ELEN_E6883_NFT", function (accounts) {
+    it("TC1: create a NFT with unique ID", async () => {
         const name = "Test NFT #1";
         const desc = "This is a test NFT description for test case 1";
 
         const txnData = await createNFT(1216, name, desc);
         const dataURI = await getURIData(1216);
-        const primaryOwner = await ownerOf(1216);
 
         const jsonObj = atob(dataURI.substring(29));
         const result = JSON.parse(jsonObj);
@@ -27,18 +25,18 @@ contract("ELEN_E6883_NFT", function ([acct1, acct2, acct3, acct4]) {
     });
 
     //*** VK added code #3 ***
-    it("TC2: transfer ownership.", async () => {
+    it("TC2: transfer ownership to another account", async () => {
         const name = "Test NFT #2";
         const desc = "This is a test NFT description for test case 2";
 
         const tokenID = await createNFT(1217, name, desc);
-        await transferNFT(1217, "0x51ad24020e97def8a779e50cbfc28439a73dd398");
+        await transferNFT(1217, accounts[1]);
 
         const currOwner = await ownerOf(1217);
-        assert.equal(currOwner, "0x51ad24020e97def8a779e50cbfc28439a73dd398", "The owners should be the same.");
+        assert.equal(currOwner, accounts[1].toLowerCase(), "The owners should be the same.");
     });
     
-    it("TC3: List NFT.", async () => {
+    it("TC3: List NFT for sale", async () => {
         const name = "Test NFT #3";
         const desc = "This is a test NFT description for test case 3";
 
@@ -49,30 +47,54 @@ contract("ELEN_E6883_NFT", function ([acct1, acct2, acct3, acct4]) {
         assert.equal(price, 31415, "The price does not match.");
     });
     
-    it("TC4: delist NFT.", async () => {
+    it("TC4: Remove the NFT from the sale", async () => {
         const name = "Test NFT #4";
         const desc = "This is a test NFT description for test case 4";
+        const price = 31415;
 
         const tokenID = await createNFT(1219, name, desc);
-        await listNFTForSale(1219, 31415);
+        await listNFTForSale(1219, price);
         await removeNFTFromSale(1219);
 
         assert.equal(await isNFTForSale(1219), false, "The NFT is still for sale.");
     });
     
-    it("TC5: Sell NFT.", async () => {
-        const currOwner = await getOwner(1216);
-        await sellNFT (1216);
-        const newOwner = await getOwner(1216);
-        assert.notEqual(currOwner, newOwner, "Sell unsucessful.");
+    it("TC5: Purchase the NFT from a seller", async () => {
+        const name = "Test NFT #5";
+        const desc = "This is a test NFT description for test case 5";
+        const price = 1;
+
+        const tokenID = await createNFT(1220, name, desc);
+        await listNFTForSale(1220, price);
+
+        //  Here we make a custom call to the purchase NFT to test the contract
+        //  the JS code can be exercised elsewhere
+        const nftContract = await ELEN_E6883_NFT.deployed();
+        const txn = await nftContract.purchaseNFT(1220, {from : accounts[1], value : price});
+
+        const currOwner = await ownerOf(1220);
+        assert.equal(currOwner, accounts[1].toLowerCase(), "The owners should be the same.");
     });
 
-    it("TC6: Unsuccessful Sell NFT.", async () => {
-        const currOwner = await getOwner(1216);
-        await cancelSale (1216);
-        const newOwner = await getOwner(1216);
-        assert.equal(currOwner, newOwner, "Sell Cancel order failed.");
-    });
+    it("TC6: Fail to purchase the NFT from a seller", async () => {
+        const name = "Test NFT #5";
+        const desc = "This is a test NFT description for test case 5";
+        const price = 2;
 
+        const tokenID = await createNFT(1221, name, desc);
+        await listNFTForSale(1221, price);
+
+        try {
+            //  Here we make a custom call to the purchase NFT to test the contract
+            //  the JS code can be exercised elsewhere
+            const nftContract = await ELEN_E6883_NFT.deployed();
+            const txn = await nftContract.purchaseNFT(1221, {from: accounts[1], value: price - 1});
+        } catch(err) {
+            // Gracefully do nothing
+        }
+
+        const currOwner = await ownerOf(1221);
+        assert.equal(currOwner, accounts[0].toLowerCase(), "The owners should be the same.");
+    });
     //*** VK end code #3 ***    
 });
