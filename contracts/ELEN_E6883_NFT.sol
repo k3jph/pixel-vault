@@ -15,7 +15,7 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
 
     Counters.Counter private _tokenIds;
     // The max number of NFTs in the collection
-    uint public constant MAX_SUPPLY = 10;
+    uint public constant MAX_SUPPLY = 100;
     // The mint price for the collection
     uint public constant PRICE = 0.00001 ether;
     // The max number of mints per wallet
