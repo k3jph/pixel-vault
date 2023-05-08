@@ -17,7 +17,7 @@ contract("ELEN_E6883_NFT", function (accounts) {
         const txnData = await createNFT(1216, name, desc);
         const dataURI = await getURIData(1216);
 
-        const jsonObj = atob(dataURI.substring(29));
+        const jsonObj = Buffer.from(dataURI.substring(29), "base64").toString("utf8");
         const result = JSON.parse(jsonObj);
 
         assert.equal(name, result.name, "The name was not stored.");
