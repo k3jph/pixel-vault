@@ -143,7 +143,11 @@ contract ELEN_E6883_NFT is ERC721URIStorage, Ownable {
         return Listings[tokenId].active;
     }
 
-    // Buy an NFT
+    function getBalanceOf(address addr) public view virtual returns (uint256) {
+        return addr.balance;
+    }
+
+// Buy an NFT
     function purchaseNFT(uint256 tokenId) public payable {
         require(_exists(tokenId), "Token ID does not exist");
         require(msg.value >= Listings[tokenId].price, "Not enough ether to cover asking price");

@@ -4,11 +4,7 @@
   If you want to mint more than one NFT, just pass in the number
  */
 var ELEN_E6883_NFT = artifacts.require("./ELEN_E6883_NFT.sol");
-
-function getErrorMessage(error) {
-  if (error instanceof Error) return error.message
-  return String(error)
-}
+const getErrorMessage = require("../scripts/getErrorMessage.js");
 
 const main = async (cb) => {
   try {

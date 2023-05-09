@@ -2,11 +2,8 @@
 
 var ELEN_E6883_NFT = artifacts.require("./ELEN_E6883_NFT.sol");
 const util = require('util')
+const getErrorMessage = require("../scripts/getErrorMessage.js");
 
-function getErrorMessage(error) {
-    if (error instanceof Error) return error.message
-    return String(error)
-}
 
 const createSale = async (unique_id, price) => {
     try {

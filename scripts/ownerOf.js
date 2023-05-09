@@ -1,11 +1,7 @@
 //SPDX-License-Identifier: MIT
 
 var ELEN_E6883_NFT = artifacts.require("./ELEN_E6883_NFT.sol");
-
-function getErrorMessage(error) {
-    if (error instanceof Error) return error.message
-    return String(error)
-}
+const getErrorMessage = require("../scripts/getErrorMessage.js");
 
 const ownerOf = async (unique_id) => {
     try {

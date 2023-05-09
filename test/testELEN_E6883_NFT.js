@@ -1,3 +1,8 @@
+//SPDX-License-Identifier: MIT
+
+const BN = require('bn.js');
+
+const balanceOf = require("../scripts/balanceOf.js");
 const createNFT = require("../scripts/createNFT.js");
 const getPrice = require("../scripts/getPrice.js");
 const getURIData = require("../scripts/getURIData.js");
@@ -62,7 +67,7 @@ contract("ELEN_E6883_NFT", function (accounts) {
     it("TC5: Purchase the NFT from a seller", async () => {
         const name = "Test NFT #5";
         const desc = "This is a test NFT description for test case 5";
-        const price = 1;
+        let price = 1000000;  // 1000000wei
 
         const tokenID = await createNFT(1220, name, desc);
         await listNFTForSale(1220, price);
@@ -70,19 +75,25 @@ contract("ELEN_E6883_NFT", function (accounts) {
         //  Here we make a custom call to the purchase NFT to test the contract
         //  the JS code can be exercised elsewhere
         const nftContract = await ELEN_E6883_NFT.deployed();
+        var account0_balance_old = await balanceOf(accounts[0]);
         const txn = await nftContract.purchaseNFT(1220, {from : accounts[1], value : price});
+        var account0_balance_new = await balanceOf(accounts[0]);
 
         const currOwner = await ownerOf(1220);
+
+        assert.equal(account0_balance_old.add(new BN(price)).toString(), account0_balance_new.toString(), "The buyers's account balance is incorrect");
         assert.equal(currOwner, accounts[1].toLowerCase(), "The owners should be the same.");
     });
 
     it("TC6: Fail to purchase the NFT from a seller", async () => {
         const name = "Test NFT #5";
         const desc = "This is a test NFT description for test case 5";
-        const price = 2;
+        let price = 1000000;  // 1000000wei
 
         const tokenID = await createNFT(1221, name, desc);
         await listNFTForSale(1221, price);
+
+        var account0_balance_old = await balanceOf(accounts[0]);
 
         try {
             //  Here we make a custom call to the purchase NFT to test the contract
@@ -92,8 +103,10 @@ contract("ELEN_E6883_NFT", function (accounts) {
         } catch(err) {
             // Gracefully do nothing
         }
+        var account0_balance_new = await balanceOf(accounts[0]);
 
         const currOwner = await ownerOf(1221);
+        assert.equal(account0_balance_old.toString(), account0_balance_new.toString(), "The buyers's account balance is incorrect");
         assert.equal(currOwner, accounts[0].toLowerCase(), "The owners should be the same.");
     });
     //*** VK end code #3 ***    
